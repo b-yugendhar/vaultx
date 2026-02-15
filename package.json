@@ -1,0 +1,35 @@
+{
+  "name": "vaultx",
+  "version": "1.0.0",
+  "description": "Decentralized Zero-Knowledge File Storage with IPFS and AES-256-GCM encryption",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8080 -c-1",
+    "serve": "python3 -m http.server 8080",
+    "dev": "npx live-server --port=8080 --no-browser"
+  },
+  "keywords": [
+    "ipfs",
+    "encryption",
+    "zero-knowledge",
+    "decentralized",
+    "file-storage",
+    "privacy",
+    "aes-256",
+    "web3"
+  ],
+  "author": "VaultX Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/vaultx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/vaultx/issues"
+  },
+  "homepage": "https://github.com/yourusername/vaultx#readme",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "live-server": "^1.2.2"
+  }
+}
