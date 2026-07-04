@@ -5,6 +5,10 @@ import { IPFSManager } from './ipfs.js';
 import { CryptoManager } from './crypto.js';
 import { UIManager } from './ui.js';
 
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:3000' 
+    : 'https://vaultx-backend.onrender.com'; // TODO: Replace this with your actual deployed backend URL
+
 class VaultXApp {
     constructor() {
         this.ipfs = new IPFSManager();
@@ -155,7 +159,7 @@ class VaultXApp {
             this.ui.showLoading('Creating your account and vault...');
 
             // 1. Register with backend
-            const regRes = await fetch('http://localhost:3000/api/register', {
+            const regRes = await fetch(`${API_BASE_URL}/api/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -230,7 +234,7 @@ class VaultXApp {
             this.ui.showLoading('Authenticating and accessing vault...');
 
             // 1. Authenticate with backend and get CID
-            const loginRes = await fetch('http://localhost:3000/api/login', {
+            const loginRes = await fetch(`${API_BASE_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -553,7 +557,7 @@ class VaultXApp {
         // Update database with new CID
         if (this.sessionUsername && this.sessionPassword) {
             try {
-                await fetch('http://localhost:3000/api/vault/cid', {
+                await fetch(`${API_BASE_URL}/api/vault/cid`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
