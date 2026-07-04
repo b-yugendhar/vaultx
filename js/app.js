@@ -7,7 +7,7 @@ import { UIManager } from './ui.js';
 
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:3000' 
-    : 'https://vaultx-backend.onrender.com'; // TODO: Replace this with your actual deployed backend URL
+    : 'https://vaultx-6x0s.onrender.com'; // TODO: Replace this with your actual deployed backend URL
 
 class VaultXApp {
     constructor() {
