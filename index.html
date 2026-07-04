@@ -1,32 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VaultX - Decentralized Zero-Knowledge Storage</title>
-    <meta name="description" content="Truly decentralized, zero-knowledge file storage with IPFS and client-side encryption">
+    <meta name="description"
+        content="Truly decentralized, zero-knowledge file storage with IPFS and client-side encryption">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
     <!-- Background Effects -->
     <div class="bg-grid"></div>
     <div class="bg-gradient"></div>
-    
+
     <!-- Header -->
     <header class="header">
         <div class="container">
             <div class="logo">
                 <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 2L37 12V28L20 38L3 28V12L20 2Z" stroke="url(#logo-gradient)" stroke-width="2" fill="none"/>
-                    <circle cx="20" cy="20" r="8" fill="url(#logo-gradient)" opacity="0.3"/>
-                    <path d="M20 15V25M15 20H25" stroke="#00f0ff" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M20 2L37 12V28L20 38L3 28V12L20 2Z" stroke="url(#logo-gradient)" stroke-width="2"
+                        fill="none" />
+                    <circle cx="20" cy="20" r="8" fill="url(#logo-gradient)" opacity="0.3" />
+                    <path d="M20 15V25M15 20H25" stroke="#00f0ff" stroke-width="2" stroke-linecap="round" />
                     <defs>
                         <linearGradient id="logo-gradient" x1="3" y1="2" x2="37" y2="38">
-                            <stop offset="0%" stop-color="#00f0ff"/>
-                            <stop offset="100%" stop-color="#ff00ea"/>
+                            <stop offset="0%" stop-color="#00f0ff" />
+                            <stop offset="100%" stop-color="#ff00ea" />
                         </linearGradient>
                     </defs>
                 </svg>
@@ -42,7 +49,7 @@
     <!-- Main Content -->
     <main class="main">
         <div class="container">
-            
+
             <!-- Welcome Screen -->
             <div id="welcomeScreen" class="screen active">
                 <div class="hero">
@@ -54,7 +61,7 @@
                     <p class="hero-subtitle">
                         Your files. Your keys. Your privacy. Built on IPFS with military-grade encryption.
                     </p>
-                    
+
                     <div class="hero-actions">
                         <button class="btn btn-primary" id="btnCreateVault">
                             <span class="btn-icon">+</span>
@@ -92,15 +99,17 @@
                     <button class="btn-back" id="btnBackFromCreate">← Back</button>
                     <h2 class="form-title">Create New Vault</h2>
                     <p class="form-subtitle">Enter a strong master password. This cannot be recovered if lost.</p>
-                    
+
+                    <div class="form-group">
+                        <label for="createUsername">Username</label>
+                        <input type="text" id="createUsername" placeholder="Choose a unique username"
+                            autocomplete="username">
+                    </div>
+
                     <div class="form-group">
                         <label for="createPassword">Master Password</label>
-                        <input 
-                            type="password" 
-                            id="createPassword" 
-                            placeholder="Enter a strong password"
-                            autocomplete="new-password"
-                        >
+                        <input type="password" id="createPassword" placeholder="Enter a strong password"
+                            autocomplete="new-password">
                         <div class="password-strength" id="passwordStrength">
                             <div class="strength-bar"></div>
                             <span class="strength-text"></span>
@@ -109,12 +118,8 @@
 
                     <div class="form-group">
                         <label for="confirmPassword">Confirm Password</label>
-                        <input 
-                            type="password" 
-                            id="confirmPassword" 
-                            placeholder="Re-enter your password"
-                            autocomplete="new-password"
-                        >
+                        <input type="password" id="confirmPassword" placeholder="Re-enter your password"
+                            autocomplete="new-password">
                     </div>
 
                     <button class="btn btn-primary btn-full" id="btnConfirmCreate">
@@ -130,25 +135,17 @@
                     <button class="btn-back" id="btnBackFromAccess">← Back</button>
                     <h2 class="form-title">Access Your Vault</h2>
                     <p class="form-subtitle">Enter your Metadata CID and master password</p>
-                    
+
                     <div class="form-group">
-                        <label for="metadataCID">Metadata CID</label>
-                        <input 
-                            type="text" 
-                            id="metadataCID" 
-                            placeholder="Qm... or bafy..."
-                            autocomplete="off"
-                        >
+                        <label for="accessUsername">Username</label>
+                        <input type="text" id="accessUsername" placeholder="Enter your username"
+                            autocomplete="username">
                     </div>
 
                     <div class="form-group">
                         <label for="accessPassword">Master Password</label>
-                        <input 
-                            type="password" 
-                            id="accessPassword" 
-                            placeholder="Enter your password"
-                            autocomplete="current-password"
-                        >
+                        <input type="password" id="accessPassword" placeholder="Enter your password"
+                            autocomplete="current-password">
                     </div>
 
                     <button class="btn btn-primary btn-full" id="btnConfirmAccess">
@@ -168,8 +165,11 @@
                             <code id="currentCID" class="vault-cid-value">-</code>
                             <button class="btn-copy" id="btnCopyCID" title="Copy CID">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                    <path d="M5 5V3C5 2.44772 5.44772 2 6 2H13C13.5523 2 14 2.44772 14 3V10C14 10.5523 13.5523 11 13 11H11" stroke="currentColor" stroke-width="1.5"/>
-                                    <rect x="2" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                                    <path
+                                        d="M5 5V3C5 2.44772 5.44772 2 6 2H13C13.5523 2 14 2.44772 14 3V10C14 10.5523 13.5523 11 13 11H11"
+                                        stroke="currentColor" stroke-width="1.5" />
+                                    <rect x="2" y="5" width="9" height="9" rx="1" stroke="currentColor"
+                                        stroke-width="1.5" />
                                 </svg>
                             </button>
                         </div>
@@ -184,12 +184,14 @@
                     <input type="file" id="fileInput" multiple hidden>
                     <div class="upload-content">
                         <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                            <path d="M32 12V42M32 12L22 22M32 12L42 22" stroke="url(#upload-gradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M52 42V52C52 53.1046 51.1046 54 50 54H14C12.8954 54 12 53.1046 12 52V42" stroke="url(#upload-gradient)" stroke-width="3" stroke-linecap="round"/>
+                            <path d="M32 12V42M32 12L22 22M32 12L42 22" stroke="url(#upload-gradient)" stroke-width="3"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M52 42V52C52 53.1046 51.1046 54 50 54H14C12.8954 54 12 53.1046 12 52V42"
+                                stroke="url(#upload-gradient)" stroke-width="3" stroke-linecap="round" />
                             <defs>
                                 <linearGradient id="upload-gradient" x1="12" y1="12" x2="52" y2="54">
-                                    <stop offset="0%" stop-color="#00f0ff"/>
-                                    <stop offset="100%" stop-color="#ff00ea"/>
+                                    <stop offset="0%" stop-color="#00f0ff" />
+                                    <stop offset="100%" stop-color="#ff00ea" />
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -206,8 +208,10 @@
                     <div class="files-list" id="filesList">
                         <div class="empty-state">
                             <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                                <rect x="20" y="15" width="40" height="50" rx="2" stroke="currentColor" stroke-width="2" opacity="0.3"/>
-                                <path d="M30 30H50M30 40H50M30 50H40" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+                                <rect x="20" y="15" width="40" height="50" rx="2" stroke="currentColor" stroke-width="2"
+                                    opacity="0.3" />
+                                <path d="M30 30H50M30 40H50M30 50H40" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" opacity="0.3" />
                             </svg>
                             <p>No files uploaded yet</p>
                         </div>
@@ -218,11 +222,45 @@
         </div>
     </main>
 
+    <!-- Modals -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3 id="previewTitle">File Preview</h3>
+                <button class="btn-icon-only modal-close" id="btnClosePreview"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" id="previewBody">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="shareModal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>Share File securely</h3>
+                <button class="btn-icon-only modal-close" id="btnCloseShare"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body share-modal-body">
+                <p>Anyone with this link can view the file. The key is in the link.</p>
+                <div class="share-link-box">
+                    <input type="text" id="shareLinkInput" readonly>
+                    <button class="btn btn-primary" id="btnCopyShareLink">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-content">
-            <div class="spinner"></div>
+            <div class="spinner" id="loadingSpinner"></div>
             <p id="loadingText">Processing...</p>
+            <div id="loadingProgressContainer"
+                style="display: none; width: 100%; min-width: 250px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin: 10px auto; overflow: hidden; box-shadow: 0 0 10px var(--primary);">
+                <div id="loadingProgressBar"
+                    style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.3s ease;">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -232,4 +270,5 @@
     <!-- Scripts -->
     <script type="module" src="js/app.js"></script>
 </body>
+
 </html>

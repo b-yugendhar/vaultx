@@ -14,6 +14,8 @@ class VaultXApp {
         this.currentVault = null;
         this.masterKey = null;
         this.metadataCID = null;
+        this.sessionUsername = null;
+        this.sessionPassword = null;
         
         this.init();
     }
@@ -29,6 +31,14 @@ class VaultXApp {
         
         // Check for saved vault in session
         this.checkSession();
+        
+        // Initialize lucide icons
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        // Check hash for share link
+        this.checkShareLink();
         
         console.log('✅ VaultX initialized');
     }
@@ -101,13 +111,36 @@ class VaultXApp {
             uploadZone.classList.remove('drag-over');
             this.handleFileUpload(e.dataTransfer.files);
         });
+
+        // Modals
+        document.getElementById('btnClosePreview')?.addEventListener('click', () => {
+            document.getElementById('previewModal').classList.remove('active');
+            document.getElementById('previewBody').innerHTML = ''; // Clear memory
+        });
+
+        document.getElementById('btnCloseShare')?.addEventListener('click', () => {
+            document.getElementById('shareModal').classList.remove('active');
+        });
+
+        document.getElementById('btnCopyShareLink')?.addEventListener('click', () => {
+            const linkInput = document.getElementById('shareLinkInput');
+            linkInput.select();
+            document.execCommand('copy');
+            this.ui.showToast('Share link copied!', 'success');
+        });
     }
 
     async handleCreateVault() {
+        const username = document.getElementById('createUsername').value.trim();
         const password = document.getElementById('createPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
 
         // Validation
+        if (!username || username.length < 3) {
+            this.ui.showToast('Username must be at least 3 characters', 'error');
+            return;
+        }
+
         if (!password || password.length < 8) {
             this.ui.showToast('Password must be at least 8 characters long', 'error');
             return;
@@ -119,7 +152,19 @@ class VaultXApp {
         }
 
         try {
-            this.ui.showLoading('Creating your vault...');
+            this.ui.showLoading('Creating your account and vault...');
+
+            // 1. Register with backend
+            const regRes = await fetch('http://localhost:3000/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (!regRes.ok) {
+                const errData = await regRes.json();
+                throw new Error(errData.error || 'Registration failed');
+            }
 
             // Derive master key from password
             this.masterKey = await this.crypto.deriveKey(password);
@@ -137,15 +182,24 @@ class VaultXApp {
                 this.masterKey
             );
 
-            this.metadataCID = await this.ipfs.uploadData(encryptedMetadata);
-
+            const newCID = await this.ipfs.uploadData(encryptedMetadata);
+            this.metadataCID = newCID;
             this.currentVault = vaultMetadata;
-
-            // Save to session
+            
+            // Save state for session
+            this.sessionUsername = username;
+            this.sessionPassword = password;
             sessionStorage.setItem('vaultCID', this.metadataCID);
 
+            // 2. Update CID on backend
+            await fetch('http://localhost:3000/api/vault/cid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, cid: newCID })
+            });
+
             this.ui.hideLoading();
-            this.ui.showToast(`Vault created! CID: ${this.metadataCID}`, 'success');
+            this.ui.showToast('Account and Vault created!', 'success');
             
             // Show vault screen
             this.ui.showScreen('vaultScreen');
@@ -159,11 +213,11 @@ class VaultXApp {
     }
 
     async handleAccessVault() {
-        const cid = document.getElementById('metadataCID').value.trim();
+        const username = document.getElementById('accessUsername').value.trim();
         const password = document.getElementById('accessPassword').value;
 
-        if (!cid) {
-            this.ui.showToast('Please enter your Metadata CID', 'error');
+        if (!username) {
+            this.ui.showToast('Please enter your username', 'error');
             return;
         }
 
@@ -173,22 +227,45 @@ class VaultXApp {
         }
 
         try {
-            this.ui.showLoading('Accessing your vault...');
+            this.ui.showLoading('Authenticating and accessing vault...');
 
-            // Derive key from password
-            this.masterKey = await this.crypto.deriveKey(password);
+            // 1. Authenticate with backend and get CID
+            const loginRes = await fetch('http://localhost:3000/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
 
-            // Fetch encrypted metadata from IPFS
+            if (!loginRes.ok) {
+                const errData = await loginRes.json();
+                throw new Error(errData.error || 'Login failed');
+            }
+            
+            const { cid } = await loginRes.json();
+            if (!cid) {
+                throw new Error('No vault associated with this account (database may be corrupt).');
+            }
+
+            // Fetch encrypted metadata from IPFS first to extract the original salt
             const encryptedMetadata = await this.ipfs.fetchData(cid);
+            const salt = encryptedMetadata.slice(0, this.crypto.saltLength);
+
+            // Derive key from password using the extracted salt
+            this.masterKey = await this.crypto.deriveKey(password, salt);
 
             // Decrypt metadata
             const decryptedMetadata = await this.crypto.decrypt(encryptedMetadata, this.masterKey);
-            this.currentVault = JSON.parse(decryptedMetadata);
+            
+            const decodedString = new TextDecoder().decode(decryptedMetadata);
+            this.currentVault = JSON.parse(decodedString);
 
             this.metadataCID = cid;
+            this.sessionUsername = username;
+            this.sessionPassword = password;
 
             // Save to session
             sessionStorage.setItem('vaultCID', cid);
+            sessionStorage.setItem('vaultUsername', username);
 
             this.ui.hideLoading();
             this.ui.showToast('Vault accessed successfully!', 'success');
@@ -200,7 +277,7 @@ class VaultXApp {
         } catch (error) {
             console.error('Error accessing vault:', error);
             this.ui.hideLoading();
-            this.ui.showToast('Failed to access vault. Check your CID and password.', 'error');
+            this.ui.showToast('Failed to access vault: ' + error.message, 'error');
         }
     }
 
@@ -215,11 +292,19 @@ class VaultXApp {
         const fileArray = Array.from(files);
         
         try {
-            this.ui.showLoading(`Uploading ${fileArray.length} file(s)...`);
+            this.ui.showLoading(`Starting upload of ${fileArray.length} file(s)...`);
+            this.ui.setProgress(0, `Uploading 0 of ${fileArray.length}...`);
 
-            for (const file of fileArray) {
+            for (let i = 0; i < fileArray.length; i++) {
+                const file = fileArray[i];
+                this.ui.setProgress(
+                    (i / fileArray.length) * 100, 
+                    `Uploading ${i + 1} of ${fileArray.length}: ${this.ui.truncate(file.name, 20)}`
+                );
                 await this.uploadSingleFile(file);
             }
+            
+            this.ui.setProgress(100, "Finalizing upload...");
 
             // Update vault metadata on IPFS
             await this.saveVaultMetadata();
@@ -330,6 +415,128 @@ class VaultXApp {
         }
     }
 
+    async handleFilePreview(fileId) {
+        const fileMetadata = this.currentVault?.files?.find(f => f.id === fileId);
+        if (!fileMetadata) return;
+
+        try {
+            this.ui.showLoading(`Decrypting ${fileMetadata.name}...`);
+            const encryptedData = await this.ipfs.fetchData(fileMetadata.cid);
+            const decryptedData = await this.crypto.decrypt(encryptedData, this.masterKey);
+            this.ui.hideLoading();
+
+            const blob = new Blob([decryptedData], { type: fileMetadata.type });
+            const url = URL.createObjectURL(blob);
+            
+            const previewModal = document.getElementById('previewModal');
+            const previewBody = document.getElementById('previewBody');
+            
+            if (fileMetadata.type.startsWith('image/')) {
+                previewBody.innerHTML = `<img src="${url}" class="preview-image" alt="Preview">`;
+                previewModal.classList.add('active');
+            } else if (fileMetadata.type.startsWith('text/') || fileMetadata.type === 'application/json') {
+                const text = await blob.text();
+                previewBody.innerHTML = `<div class="preview-text">${this.escapeHtml(text)}</div>`;
+                previewModal.classList.add('active');
+            } else {
+                this.ui.showToast('Preview not supported for this file type.', 'warning');
+            }
+        } catch (error) {
+            console.error('Preview error:', error);
+            this.ui.hideLoading();
+            this.ui.showToast('Failed to preview: ' + error.message, 'error');
+        }
+    }
+
+    async handleFileShare(fileId) {
+        const fileMetadata = this.currentVault?.files?.find(f => f.id === fileId);
+        if (!fileMetadata) return;
+
+        try {
+            // Export the master key to include in the fragment
+            const exportedKey = await window.crypto.subtle.exportKey('jwk', this.masterKey.key);
+            const keyString = btoa(JSON.stringify(exportedKey));
+            
+            const url = new URL(window.location.href);
+            url.hash = `share=${fileMetadata.cid}&key=${keyString}&name=${encodeURIComponent(fileMetadata.name)}&type=${encodeURIComponent(fileMetadata.type)}`;
+            
+            document.getElementById('shareLinkInput').value = url.toString();
+            document.getElementById('shareModal').classList.add('active');
+            
+        } catch (error) {
+            console.error('Share error:', error);
+            this.ui.showToast('Failed to generate share link', 'error');
+        }
+    }
+
+    async checkShareLink() {
+        if (!window.location.hash) return;
+        
+        const hash = window.location.hash.substring(1);
+        if (!hash.startsWith('share=')) return;
+
+        const params = new URLSearchParams(hash);
+        const cid = params.get('share');
+        const keyBase64 = params.get('key');
+        const fileName = params.get('name') || 'Shared File';
+        const fileType = params.get('type') || 'application/octet-stream';
+
+        if (!cid || !keyBase64) return;
+
+        try {
+            this.ui.showLoading('Decrypting shared file...');
+            
+            // Import key
+            const jwk = JSON.parse(atob(keyBase64));
+            const key = await window.crypto.subtle.importKey(
+                'jwk',
+                jwk,
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            // Fetch and decrypt
+            const encryptedData = await this.ipfs.fetchData(cid);
+            const decryptedData = await this.crypto.decrypt(encryptedData, { key: key });
+            this.ui.hideLoading();
+
+            // Offer download or preview
+            const blob = new Blob([decryptedData], { type: fileType });
+            const url = URL.createObjectURL(blob);
+            
+            if (fileType.startsWith('image/')) {
+                const previewModal = document.getElementById('previewModal');
+                document.getElementById('previewBody').innerHTML = `
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <a href="${url}" download="${fileName}" class="btn btn-primary">Download ${fileName}</a>
+                    </div>
+                    <img src="${url}" class="preview-image" alt="Preview">
+                `;
+                document.getElementById('previewTitle').textContent = 'Shared File';
+                previewModal.classList.add('active');
+            } else {
+                // Direct download for non-images
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                this.ui.showToast('Shared file downloaded!', 'success');
+            }
+            
+            // Clear hash
+            history.replaceState(null, null, window.location.pathname);
+            
+        } catch (error) {
+            console.error('Share decode error:', error);
+            this.ui.hideLoading();
+            this.ui.showToast('Invalid or expired share link!', 'error');
+            history.replaceState(null, null, window.location.pathname);
+        }
+    }
+
     async saveVaultMetadata() {
         // Encrypt metadata
         const encryptedMetadata = await this.crypto.encrypt(
@@ -342,6 +549,23 @@ class VaultXApp {
         
         this.metadataCID = newCID;
         sessionStorage.setItem('vaultCID', newCID);
+
+        // Update database with new CID
+        if (this.sessionUsername && this.sessionPassword) {
+            try {
+                await fetch('http://localhost:3000/api/vault/cid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: this.sessionUsername, 
+                        password: this.sessionPassword, 
+                        cid: newCID 
+                    })
+                });
+            } catch (err) {
+                console.error("Failed to sync CID to backend:", err);
+            }
+        }
 
         console.log(`📝 Updated vault metadata: ${newCID}`);
     }
@@ -378,6 +602,8 @@ class VaultXApp {
             this.currentVault.files.forEach(file => {
                 const downloadBtn = document.getElementById(`download-${file.id}`);
                 const deleteBtn = document.getElementById(`delete-${file.id}`);
+                const previewBtn = document.getElementById(`preview-${file.id}`);
+                const shareBtn = document.getElementById(`share-${file.id}`);
 
                 if (downloadBtn) {
                     downloadBtn.addEventListener('click', () => this.handleFileDownload(file.id));
@@ -386,7 +612,19 @@ class VaultXApp {
                 if (deleteBtn) {
                     deleteBtn.addEventListener('click', () => this.handleFileDelete(file.id));
                 }
+
+                if (previewBtn) {
+                    previewBtn.addEventListener('click', () => this.handleFilePreview(file.id));
+                }
+
+                if (shareBtn) {
+                    shareBtn.addEventListener('click', () => this.handleFileShare(file.id));
+                }
             });
+            
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
         }
     }
 
@@ -403,16 +641,17 @@ class VaultXApp {
                     <div class="file-meta">${fileSize} • ${uploadDate} • CID: ${file.cid.substring(0, 12)}...</div>
                 </div>
                 <div class="file-actions">
+                    <button class="btn-icon-only" id="preview-${file.id}" title="Preview">
+                        <i data-lucide="eye"></i>
+                    </button>
+                    <button class="btn-icon-only" id="share-${file.id}" title="Share">
+                        <i data-lucide="share-2"></i>
+                    </button>
                     <button class="btn-icon-only" id="download-${file.id}" title="Download">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M8 2V11M8 11L5 8M8 11L11 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M14 11V13C14 13.5523 13.5523 14 13 14H3C2.44772 14 2 13.5523 2 13V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
+                        <i data-lucide="download"></i>
                     </button>
                     <button class="btn-icon-only danger" id="delete-${file.id}" title="Delete">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M3 4H13M5 4V3C5 2.44772 5.44772 2 6 2H10C10.5523 2 11 2.44772 11 3V4M6 7V11M10 7V11M4 4H12V13C12 13.5523 11.5523 14 11 14H5C4.44772 14 4 13.5523 4 13V4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                        <i data-lucide="trash-2"></i>
                     </button>
                 </div>
             </div>
@@ -430,11 +669,14 @@ class VaultXApp {
     }
 
     handleLogout() {
-        if (confirm('Are you sure you want to logout? Make sure you have saved your CID!')) {
+        if (confirm('Are you sure you want to logout?')) {
             sessionStorage.removeItem('vaultCID');
+            sessionStorage.removeItem('vaultUsername');
             this.currentVault = null;
             this.masterKey = null;
             this.metadataCID = null;
+            this.sessionUsername = null;
+            this.sessionPassword = null;
             
             this.ui.showScreen('welcomeScreen');
             this.ui.showToast('Logged out successfully', 'success');
@@ -442,11 +684,11 @@ class VaultXApp {
     }
 
     checkSession() {
-        const savedCID = sessionStorage.getItem('vaultCID');
+        const savedUsername = sessionStorage.getItem('vaultUsername');
         
-        if (savedCID) {
-            // Auto-show access vault screen with CID pre-filled
-            document.getElementById('metadataCID').value = savedCID;
+        if (savedUsername) {
+            // Auto-show access vault screen with username pre-filled
+            document.getElementById('accessUsername').value = savedUsername;
             this.ui.showScreen('accessVaultScreen');
             this.ui.showToast('Please enter your password to access your vault', 'info');
         }

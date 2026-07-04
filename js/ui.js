@@ -43,6 +43,30 @@ export class UIManager {
         
         text.textContent = message;
         overlay.classList.add('active');
+        this.hideProgress(); // reset progress UI if it was active
+    }
+
+    setProgress(percent, text = null) {
+        const container = document.getElementById('loadingProgressContainer');
+        const bar = document.getElementById('loadingProgressBar');
+        const spinner = document.getElementById('loadingSpinner');
+        
+        if (container && bar && spinner) {
+            container.style.display = 'block';
+            spinner.style.display = 'none';
+            bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+        }
+        
+        if (text) {
+            document.getElementById('loadingText').textContent = text;
+        }
+    }
+
+    hideProgress() {
+        const container = document.getElementById('loadingProgressContainer');
+        const spinner = document.getElementById('loadingSpinner');
+        if (container) container.style.display = 'none';
+        if (spinner) spinner.style.display = 'block';
     }
 
     /**
@@ -51,6 +75,7 @@ export class UIManager {
     hideLoading() {
         const overlay = document.getElementById('loadingOverlay');
         overlay.classList.remove('active');
+        this.hideProgress();
     }
 
     /**
