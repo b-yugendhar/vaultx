@@ -5,7 +5,7 @@ import { IPFSManager } from './ipfs.js';
 import { CryptoManager } from './crypto.js';
 import { UIManager } from './ui.js';
 
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
     ? 'http://localhost:3001' 
     : 'https://vaultx-6x0s.onrender.com'; // TODO: Replace this with your actual deployed backend URL
 
@@ -599,7 +599,7 @@ class VaultXApp {
         } else {
             filesList.innerHTML = this.currentVault.files
                 .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))
-                .map(file => this.createFileItem(file))
+                .map((file, index) => this.createFileItem(file, index))
                 .join('');
 
             // Attach event listeners to file action buttons
@@ -632,13 +632,14 @@ class VaultXApp {
         }
     }
 
-    createFileItem(file) {
+    createFileItem(file, index = 0) {
         const fileIcon = this.getFileIcon(file.type);
         const fileSize = this.formatFileSize(file.size);
         const uploadDate = new Date(file.uploadedAt).toLocaleDateString();
+        const delay = index * 0.08;
 
         return `
-            <div class="file-item">
+            <div class="file-item" style="animation-delay: ${delay}s">
                 <div class="file-icon">${fileIcon}</div>
                 <div class="file-info">
                     <div class="file-name">${this.escapeHtml(file.name)}</div>
