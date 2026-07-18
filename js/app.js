@@ -6,7 +6,7 @@ import { CryptoManager } from './crypto.js';
 import { UIManager } from './ui.js';
 
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://localhost:3000' 
+    ? 'http://localhost:3001' 
     : 'https://vaultx-6x0s.onrender.com'; // TODO: Replace this with your actual deployed backend URL
 
 class VaultXApp {
@@ -196,7 +196,7 @@ class VaultXApp {
             sessionStorage.setItem('vaultCID', this.metadataCID);
 
             // 2. Update CID on backend
-            await fetch('http://localhost:3000/api/vault/cid', {
+            await fetch(`${API_BASE_URL}/api/vault/cid`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password, cid: newCID })

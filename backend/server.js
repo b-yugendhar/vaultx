@@ -3,37 +3,29 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-
-// Load environment variables from .env file
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Supabase Configuration
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-    console.error("❌ Missing SUPABASE_URL or SUPABASE_KEY in environment variables. Please check your .env file!");
+    console.error("Missing SUPABASE_URL or SUPABASE_KEY in environment variables. Please check your .env file!");
 }
 
-// Initialize Supabase Client
 const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
 
-// API: Register User
 app.post('/api/register', async (req, res) => {
     try {
         const { username, password } = req.body;
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' });
         }
-
-        // Check if user exists
         const { data: existingUser } = await supabase
             .from('users')
             .select('*')
@@ -78,8 +70,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Compare password hash
-        const match = await bcrypt.compare(password, user.password_hash);
+        const match =await bcrypt.compare(password, user.password_hash);
         if (!match) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
@@ -90,8 +81,6 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
-// API: Update CID
 app.post('/api/vault/cid', async (req, res) => {
     try {
         const { username, password, cid } = req.body;
